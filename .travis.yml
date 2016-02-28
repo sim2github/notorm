@@ -9,4 +9,7 @@ php:
 env:
   - DB=mysql
 
+before_script:
+  - composer install
+
 script: phpunit --configuration phpunit_$DB.xml --coverage-text
