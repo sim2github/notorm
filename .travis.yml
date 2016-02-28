@@ -11,5 +11,6 @@ env:
 
 before_script:
   - composer install
+  - if [[ "$DB" == "mysql" ]]; then mysql -e "create database IF NOT EXISTS software;" -uroot; fi
 
 script: phpunit --configuration phpunit_$DB.xml --coverage-text
