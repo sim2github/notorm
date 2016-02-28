@@ -13,11 +13,7 @@
 	<php>
 		<ini name="display_errors" value="On" />
 		<ini name="display_startup_errors" value="On" />
-
-		<var name="db_dsn" value="mysql:dbname=software;host=localhost"/>
-		<var name="db_username" value="root"/>
-		<var name="db_password" value="root"/>
-		<var name="db_file" value="./tests/software.sql"/>
+		<ini name="zend.enable_gc" value="Off" />
 	</php>
 
 	<testsuites>
@@ -31,4 +27,8 @@
 			<directory>./src</directory>
 		</whitelist>
 	</filter>
+
+	<logging>
+		<log type="coverage-html" target="./tests/codecoverage" charset="UTF-8" />
+	</logging>
 </phpunit>

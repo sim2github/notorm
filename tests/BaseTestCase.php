@@ -1,26 +1,35 @@
 <?php
+namespace NotORM\Tests;
 
-class NotormTest extends PHPUnit_Framework_TestCase
+abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 {
+	public static $params;
+	protected $db_type = null;
 
 
 	/**
 	 * @var PDO
 	 */
-	private $pdo;
-	private $db = null;
+	protected $pdo;
+	protected $db = null;
 
 	/**
 	 * Setup the test environment.
 	 */
 	public function setUp()
 	{
-		$this->pdo = new PDO($GLOBALS['db_dsn'], $GLOBALS['db_username'], $GLOBALS['db_password']);
-		$this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
-		$this->pdo->setAttribute(PDO::ATTR_CASE, PDO::CASE_LOWER);
-		$this->pdo->exec(file_get_contents($GLOBALS['db_file']));
+		$params = static::getParam('databases');
 
-		$this->db = new NotORM\Instance($this->pdo);
+		$this->pdo = new \PDO(
+				$params[$this->db_type]['dsn'],
+				$params[$this->db_type]['username'],
+				$params[$this->db_type]['password']
+			);
+		$this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_WARNING);
+		$this->pdo->setAttribute(\PDO::ATTR_CASE, \PDO::CASE_LOWER);
+		$this->pdo->exec(file_get_contents($params['mysql']['fixture']));
+
+		$this->db = new \NotORM\Instance($this->pdo);
 	}
 
 	/**
@@ -28,8 +37,21 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	 */
 	public function tearDown()
 	{
-//		$this->pdo->exec('DROP TABLE ')
 		$this->db = null;
+	}
+
+	/**
+	 * Returns a test configuration param from config.php
+	 * @param  string $name params name
+	 * @param  mixed $default default value to use when param is not set.
+	 * @return mixed  the value of the configuration param
+	 */
+	public static function getParam($name, $default = null)
+	{
+		if (static::$params === null) {
+			static::$params = require(__DIR__ . '/config.php');
+		}
+		return isset(static::$params[$name]) ? static::$params[$name] : $default;
 	}
 
 	/**
@@ -40,7 +62,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	public function testInstanceOf()
 	{
 		$this->assertInstanceOf('PDO', $this->pdo);
-		$this->assertInstanceOf('NotORM\Instance', $this->db);
+		$this->assertInstanceOf('\NotORM\Instance', $this->db);
 	}
 
 	/**
@@ -142,12 +164,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	 */
 	public function testToString()
 	{
-		$expected = [
-			1,
-			2,
-			3,
-			4,
-		];
+		$expected = [ 1, 2, 3, 4 ];
 
 		foreach ($this->db->application() as $application) {
 			$result[] = (string)$application;
@@ -182,7 +199,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	/**
 	 * Subqueries
 	 */
-	public function testSubquery()
+	public function testSubQuery()
 	{
 		$expected = [
 			'Adminer',
@@ -223,7 +240,14 @@ class NotormTest extends PHPUnit_Framework_TestCase
 			]
 		];
 
-		$discovery = new NotORM\Instance($this->pdo, new NotORM\StructureDiscovery($this->pdo));
+		$discovery = new \NotORM\Instance(
+			$this->pdo,
+			new \NotORM\StructureDiscovery(
+				$this->pdo,
+				new \NotORM\CacheSession()
+			),
+			new \NotORM\CacheSession()
+		);
 		foreach ($discovery->application() as $application) {
 			$result[$application['title']]['authors'][] = $application->author_id['name'];
 			foreach ($application->application_tag() as $application_tag) {
@@ -247,7 +271,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 		];
 
 		$_SESSION = array(); // not session_start() - headers already sent
-		$cache = new NotORM\Instance($this->pdo, null, new NotORM\CacheSession());
+		$cache = new \NotORM\Instance($this->pdo, null, new \NotORM\CacheSession());
 		$applications = $cache->application();
 		$application = $applications->fetch();
 		$application['title'];
@@ -284,7 +308,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 		$application = $this->db->application()->insert([
 			'id' => $id,
 			'author_id' => $this->db->author[12],
-			'title' => new NotORM\Literal("'Texy'"),
+			'title' => new \NotORM\Literal("'Texy'"),
 			'web' => '',
 			'slogan' => 'The best humane Web text generator',
 		]);
@@ -434,7 +458,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 		];
 
 		$application = $this->db->application[1];
-		foreach ($application->application_tag()->order('tag_id')->limit(1, 1) as $application_tag) {
+		foreach ($application->application_tag()->order('tag_id')->limit(3, 1) as $application_tag) {
 			$result[] = $application_tag->tag['name'];
 		}
 		foreach ($this->db->application() as $application) {
@@ -463,15 +487,16 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	 */
 	public function testUnion()
 	{
-		$driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+		$driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		if (preg_match('~^(sqlite|oci)$~', $driver)) {
 			echo "Union not supported in $driver. Skip test.\n";
 		} else {
-			$expected = [22, 21, 4, 3];
+
+			$expected = [ 22, 21, 4 ];
 
 			$applications = $this->db->application()->select('id')->order('id DESC')->limit(2);
 			$tags = $this->db->tag()->select('id')->order('id')->limit(2);
-			foreach ($applications->union($tags)->order('id DESC') as $row) {
+			foreach ($applications->union($tags)->order('id DESC')->limit(3) as $row) {
 				$result[] = $row['id'];
 			}
 
@@ -500,10 +525,12 @@ class NotormTest extends PHPUnit_Framework_TestCase
 
 	/**
 	 * Extended insert
+	 * @group sqlite
+	 * @group oci
 	 */
 	public function testExtendedInsert()
 	{
-		$driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+		$driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		if (preg_match('~^(sqlite|oci)$~', $driver)) {
 			echo "Extended insert not supported in $driver. Skip test.\n";
 		} else {
@@ -560,7 +587,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	{
 		$expected = 'SELECT prefix_application.* FROM prefix_application LEFT JOIN prefix_author AS author ON prefix_application.author_id = author.id WHERE (author.name = \'Jakub Vrana\')';
 
-		$prefix = new NotORM\Instance($this->pdo, new NotORM\StructureConvention('id', '%s_id', '%s', 'prefix_'));
+		$prefix = new \NotORM\Instance($this->pdo, new \NotORM\StructureConvention('id', '%s_id', '%s', 'prefix_'));
 		$applications = $prefix->application('author.name', 'Jakub Vrana');
 		$result = (string)$applications;
 
@@ -574,7 +601,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	{
 		$expected = 'SELECT * FROM application FOR UPDATE';
 
-		$result = (string)$this->db->application()->lock();
+		$result = (string) $this->db->application()->lock();
 
 		$this->assertEquals($expected, $result);
 	}
@@ -644,7 +671,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 		$expected = [ 3 ];
 
 
-		foreach ($this->db->author()->select(new NotORM\Literal('? + ?', 1, 2))->fetch() as $val) {
+		foreach ($this->db->author()->select(new \NotORM\Literal('? + ?', 1, 2))->fetch() as $val) {
 			$result[] = $val;
 		}
 
@@ -672,11 +699,11 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	{
 		$expected = [ 'Adminer', 'Jakub Vrana' ];
 
-		$this->db->rowClass = 'TestRow';
+		$this->db->rowClass = '\NotORM\Tests\TestRow';
 		$application = $this->db->application[1];
 		$result[] = $application['test_title'];
 		$result[] = $application->author['test_name'];
-		$this->db->rowClass = 'NotORM\Row';
+		$this->db->rowClass = 'Row';
 
 		$this->assertEquals($expected, $result);
 	}
@@ -686,23 +713,21 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	 */
 	public function testDateTime()
 	{
-//		$expected = '2011-08-30 00:00:00';
-//
-//		$date = new DateTime('2011-08-30');
-//		var_dump(new NotORM\Literal('?', $date));
-		//TODO Literal return object (date must be formated) - don't now what author mean in this test
+		$expected = '2011-08-30 00:00:00';
 
-//		$this->db->application()->insert([
-//			'id' => 5,
-//			'author_id' => 11,
-//			'title' => $date,
-//			'slogan' => new NotORM\Literal('?', $date),
-//		]);
-//		$application = $this->db->application()->where('title = ?', $date)->fetch();
-//		$result = (string) $application['slogan'];
-//		$application->delete();
+		$date = new \DateTime('2011-08-30');
 
-//		$this->assertEquals($expected, $result);
+		$this->db->application()->insert([
+			'id' => 5,
+			'author_id' => 11,
+			'title' => $date,
+			'slogan' => new \NotORM\Literal('?', $date),
+		]);
+		$application = $this->db->application()->where('title = ?', $date)->fetch();
+		$result = (string) $application['slogan'];
+		$application->delete();
+
+		$this->assertEquals($expected, $result);
 	}
 
 	/**
@@ -726,7 +751,7 @@ class NotormTest extends PHPUnit_Framework_TestCase
 	{
 		$expected = [ 'Jakub Vrana', 'Adminer' ];
 
-		$convention = new NotORM\Instance($this->pdo, new SoftwareConvention);
+		$convention = new \NotORM\Instance($this->pdo, new \NotORM\Tests\SoftwareConvention);
 		$maintainer = $convention->application[1]->maintainer;
 		$result[] = $maintainer['name'];
 		foreach ($maintainer->application()->via('maintainer_id') as $application) {
@@ -822,32 +847,47 @@ class NotormTest extends PHPUnit_Framework_TestCase
 
 		$this->assertEquals($expected, $result);
 	}
-}
+
+	/**
+	 * Test debug
+	 */
+	public function testDebug()
+	{
+		$expected = [ 4, 1, 10 ];
+
+		$applications = $this->db->application;
+
+		$this->db->debug = true;
+		$time_start = microtime(true);
 
 
-/***
- * Additional Classes extends functionality
- */
+		$result[] = $applications->max('id');
+		$time_end = microtime(true);
+		$time = $time_end - $time_start;
 
-// tesRowClass()
-class TestRow extends NotORM\Row {
+		$this->db->debugTimer = function () use ($time_start, $time_end, $time) {
+			echo 'Start: ' . $time_start . ' End: ' . $time_end . ' Total: ' . $time . PHP_EOL;
+		};
+		$this->db->debug = false;
 
-	function offsetExists($key) {
-		return parent::offsetExists(preg_replace('~^test_~', '', $key));
+		$result[] = $applications->min('id');
+		$result[] = $applications->sum('id');
+
+
+		$this->assertEquals($expected, $result);
 	}
 
-	function offsetGet($key) {
-		return parent::offsetGet(preg_replace('~^test_~', '', $key));
-	}
+	public function testJsonSerialize()
+	{
+		$expected = '{"1":{"id":"1","author_id":"11","maintainer_id":"11","title":"Adminer","web":"http:\/\/www.adminer.org\/","slogan":"Database management in single PHP file"},"2":{"id":"2","author_id":"11","maintainer_id":null,"title":"JUSH","web":"http:\/\/jush.sourceforge.net\/","slogan":"JavaScript Syntax Highlighter"},"3":{"id":"3","author_id":"12","maintainer_id":"12","title":"Nette","web":"http:\/\/nettephp.com\/","slogan":"Nette Framework for PHP 5"},"4":{"id":"4","author_id":"12","maintainer_id":"12","title":"Dibi","web":"http:\/\/dibiphp.com\/","slogan":"Database Abstraction Library for PHP 5"}}';
 
-}
-
-//testStructure()
-class SoftwareConvention extends NotORM\StructureConvention {
-	function getReferencedTable($name, $table) {
-		switch ($name) {
-			case 'maintainer': return parent::getReferencedTable('author', $table);
+		if ($this->db->application->max("id")) {
+			$result = json_encode(array_map('iterator_to_array', iterator_to_array($this->db->application())));
+//			$result = json_encode($this->db->application[1]->author);
 		}
-		return parent::getReferencedTable($name, $table);
+
+		$this->assertEquals($expected, $result);
+
 	}
+
 }

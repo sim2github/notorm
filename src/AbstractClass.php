@@ -11,7 +11,6 @@ abstract class AbstractClass {
 	protected $rowClass = 'NotORM\Row';
 	protected $jsonAsArray = false;
 
-	protected function access($key, $delete = false) {
-	}
+	protected abstract function access($key, $delete = false);
 
 }

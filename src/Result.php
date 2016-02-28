@@ -169,7 +169,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	}
 	
 	protected function formatValue($val) {
-		if ($val instanceof DateTime) {
+		if ($val instanceof \DateTime) {
 			return $val->format("Y-m-d H:i:s"); //! may be driver specific
 		}
 		return $val;
@@ -211,14 +211,14 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		if ($data instanceof Result) {
 			$parameters = $data->parameters; //! other parameters
 			$data = (string) $data;
-		} elseif ($data instanceof Traversable) {
+		} elseif ($data instanceof \Traversable) {
 			$data = iterator_to_array($data);
 		}
 		$insert = $data;
 		if (is_array($data)) {
 			$values = array();
 			foreach ($rows as $value) {
-				if ($value instanceof Traversable) {
+				if ($value instanceof \Traversable) {
 					$value = iterator_to_array($value);
 				}
 				$values[] = $this->quote($value);
@@ -728,7 +728,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	protected function single() {
 	}
-	
+
 	// Iterator implementation (not IteratorAggregate because $this->data can be changed during iteration)
 	
 	function rewind() {
@@ -802,12 +802,10 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	}
 
 	/** Mimic row
-	 * @param mixed $key
-	 * @param mixed $value
+	 * @param mixed $key string ID
+	 * @param mixed $value NotORM\Row
 	 * @return null
 	 * @throws null
-	 * @internal param row $string ID
-	 * @internal param $NotORM_Row
 	 */
 	function offsetSet($key, $value) {
 		$this->execute();
@@ -815,10 +813,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	}
 
 	/** Remove row from result set
-	 * @param mixed $key
+	 * @param mixed $key string ID
 	 * @return null
 	 * @throws null
-	 * @internal param row $string ID
 	 */
 	function offsetUnset($key) {
 		$this->execute();

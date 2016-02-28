@@ -27,7 +27,6 @@ class Instance extends AbstractClass {
 		}
 		$this->structure = $structure;
 		$this->cache = $cache;
-//		$this->debug = true;
 	}
 	
 	/** Get table data to use as $db->table[1]
@@ -35,9 +34,7 @@ class Instance extends AbstractClass {
 	* @return Result
 	*/
 	function __get($table) {
-		if (is_string($table)) {
-			return new Result($this->structure->getReferencingTable($table, ''), $this, true);
-		} else throw new \InvalidArgumentException;
+		return new Result($this->structure->getReferencingTable($table, ''), $this, true);
 	}
 
 	/** Set write-only properties
@@ -54,7 +51,7 @@ class Instance extends AbstractClass {
 				case "COMMIT": return $this->connection->commit();
 				case "ROLLBACK": return $this->connection->rollback();
 			}
-		} else throw new \InvalidArgumentException;
+		}
 	}
 	
 	/** Get table data
@@ -72,5 +69,9 @@ class Instance extends AbstractClass {
 		}
 		return $return;
 	}
-	
+
+	protected function access($key, $delete = false)
+	{
+		// TODO: Implement access() method. Or not implement at all.
+	}
 }
