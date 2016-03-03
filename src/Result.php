@@ -467,7 +467,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 			}
 		} else { // http://download.oracle.com/docs/cd/B19306_01/server.102/b14200/expressions014.htm
 			$or = array();
-			for ($i=0; $i < count($parameters); $i += 1000) {
+			for ($i=0, $c=count($parameters); $i<$c; $i += 1000) {
 				$or[] = "$condition IN " . $this->quote(array_slice($parameters, $i, 1000));
 			}
 			$condition = implode(" OR ", $or);
