@@ -20,14 +20,19 @@ abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 	{
 		$params = static::getParam('databases');
 
-		$this->pdo = new \PDO(
-				$params[$this->db_type]['dsn'],
-				$params[$this->db_type]['username'],
-				$params[$this->db_type]['password']
+		if ($this->db_type === 'sqlite') {
+			$this->pdo = new \PDO($params[$this->db_type]['dsn']);
+		} else {
+			$this->pdo = new \PDO(
+					$params[$this->db_type]['dsn'],
+					$params[$this->db_type]['username'],
+					$params[$this->db_type]['password']
 			);
+		}
+
 		$this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_WARNING);
 		$this->pdo->setAttribute(\PDO::ATTR_CASE, \PDO::CASE_LOWER);
-		$this->pdo->exec(file_get_contents($params['mysql']['fixture']));
+		$this->pdo->exec(file_get_contents($params[$this->db_type]['fixture']));
 
 		$this->db = new \NotORM\Instance($this->pdo);
 	}
@@ -451,23 +456,28 @@ abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 	 */
 	public function testOffset()
 	{
-		$expected = [
-			'MySQL',
-			'MySQL',
-			'MySQL',
-		];
+		$driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+		if (preg_match('~^(sqlite|oci)$~', $driver)) {
+			echo " --- Skip test \"Limit and offset\". Union not supported in " . ucfirst($driver) . "."  . PHP_EOL;
+		} else {
+			$expected = [
+				'MySQL',
+				'MySQL',
+				'MySQL',
+			];
 
-		$application = $this->db->application[1];
-		foreach ($application->application_tag()->order('tag_id')->limit(3, 1) as $application_tag) {
-			$result[] = $application_tag->tag['name'];
-		}
-		foreach ($this->db->application() as $application) {
-			foreach ($application->application_tag()->order('tag_id')->limit(1, 1) as $application_tag) {
+			$application = $this->db->application[1];
+			foreach ($application->application_tag()->order('tag_id')->limit(3, 1) as $application_tag) {
 				$result[] = $application_tag->tag['name'];
 			}
-		}
+			foreach ($this->db->application() as $application) {
+				foreach ($application->application_tag()->order('tag_id')->limit(1, 1) as $application_tag) {
+					$result[] = $application_tag->tag['name'];
+				}
+			}
 
-		$this->assertEquals($expected, $result);
+			$this->assertEquals($expected, $result);
+		}
 	}
 
 	/**
@@ -489,7 +499,7 @@ abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 	{
 		$driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		if (preg_match('~^(sqlite|oci)$~', $driver)) {
-			echo "Union not supported in $driver. Skip test.\n";
+			echo " --- Skip test \"Complex UNION\". Union not supported in " . ucfirst($driver) . "."  . PHP_EOL;
 		} else {
 
 			$expected = [ 22, 21, 4 ];
@@ -532,7 +542,7 @@ abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 	{
 		$driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		if (preg_match('~^(sqlite|oci)$~', $driver)) {
-			echo "Extended insert not supported in $driver. Skip test.\n";
+			echo " --- Skip test \"Extended insert\". Extended insert not supported in " . ucfirst($driver) . "."  . PHP_EOL;
 		} else {
 			$expected = [[3 => 23], [3 => 22], [3 => 21]];
 
@@ -857,16 +867,17 @@ abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 
 		$applications = $this->db->application;
 
-		$this->db->debug = true;
 		$time_start = microtime(true);
-
+		$this->db->debug = function () use ($time_start) {
+			echo 'Start: ' . $time_start . PHP_EOL;
+		};
 
 		$result[] = $applications->max('id');
-		$time_end = microtime(true);
-		$time = $time_end - $time_start;
 
-		$this->db->debugTimer = function () use ($time_start, $time_end, $time) {
-			echo 'Start: ' . $time_start . ' End: ' . $time_end . ' Total: ' . $time . PHP_EOL;
+		$this->db->debugTimer = function () use ($time_start) {
+			$time_end = microtime(true);
+			$time = $time_end - $time_start;
+			echo 'End: ' . $time_end . PHP_EOL . 'Total: ' . $time . PHP_EOL;
 		};
 		$this->db->debug = false;
 
