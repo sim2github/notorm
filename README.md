@@ -1,4 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/sim2github/notorm.png)](http://travis-ci.org/sim2github/notorm)
+[![Build Status](https://secure.travis-ci.org/sim2github/notorm.png)](http://travis-ci.org/sim2github/notorm) [![Code Coverage](https://scrutinizer-ci.com/g/sim2github/notorm/badges/coverage.png?b=next)](https://scrutinizer-ci.com/g/sim2github/notorm/?branch=next)
 
 # NotORM - http://www.notorm.com/
 
