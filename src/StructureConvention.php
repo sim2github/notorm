@@ -32,6 +32,9 @@ class StructureConvention implements StructureInterface
 		return sprintf($this->primary, $this->getColumnFromTable($table));
 	}
 
+	/**
+	 * @param string $name
+	 */
 	protected function getColumnFromTable($name)
 	{
 		if ($this->table != '%s' && preg_match('(^' . str_replace('%s', '(.*)', preg_quote($this->table)) . '$)', $name, $match)) {
