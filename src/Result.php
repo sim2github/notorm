@@ -81,6 +81,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		return $return;
 	}
 	
+	/**
+	 * @param integer $limit
+	 */
 	protected function topString($limit) {
 		if (isset($limit) && ($this->notORM->driver == "dblib" || $this->notORM->driver == "mssql" || $this->notORM->driver == "sqlsrv")) {
 			return " TOP ($this->limit)"; //! offset is not supported
