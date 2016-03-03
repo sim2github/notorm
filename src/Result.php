@@ -88,6 +88,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		return "";
 	}
 	
+	/**
+	 * @param string $val
+	 */
 	protected function createJoins($val) {
 		$return = array();
 		preg_match_all('~\\b([a-z_][a-z0-9_.:]*[.:])[a-z_*]~i', $val, $matches);
@@ -246,6 +249,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/** Insert row in a table
 	* @param mixed array($column => $value)|Traversable for single row insert or Result|string for INSERT ... SELECT
 	* @param ... used for extended insert
+	* @param string $data
 	* @return mixed inserted NotORM\Row or false in case of an error or number of affected rows for INSERT ... SELECT
 	*/
 	public function insert($data) {
@@ -393,6 +397,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		return $this->whereOperator("AND", $args);
 	}
 	
+	/**
+	 * @param string $operator
+	 */
 	protected function whereOperator($operator, array $args) {
 		$condition = $args[0];
 		$parameters = (count($args) > 1 ? $args[1] : array());
@@ -455,6 +462,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		return $this;
 	}
 	
+	/**
+	 * @return string
+	 */
 	protected function whereIn($condition, $parameters) {
 		if (!$parameters) {
 			$condition = "($condition) IS NOT NULL AND $condition IS NULL";
@@ -523,6 +533,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/** Set limit clause, more calls rewrite old values
 	* @param int
 	* @param int
+	* @param integer $limit
 	* @return Result fluent interface
 	*/
 	public function limit($limit, $offset = null) {
@@ -598,7 +609,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	/** Return minimum value from a column
 	* @param string
-	* @return int
+	* @return string
 	*/
 	public function min($column) {
 		return $this->aggregation("MIN($column)");
@@ -606,7 +617,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	/** Return maximum value from a column
 	* @param string
-	* @return int
+	* @return string
 	*/
 	public function max($column) {
 		return $this->aggregation("MAX($column)");
@@ -614,7 +625,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	/** Return sum of values in a column
 	* @param string
-	* @return int
+	* @return string
 	*/
 	public function sum($column) {
 		return $this->aggregation("SUM($column)");

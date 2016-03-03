@@ -40,7 +40,7 @@ class Instance extends AbstractClass {
 	/** Set write-only properties
 	 * @param $name
 	 * @param $value
-	 * @return null
+	 * @return null|boolean
 	 */
 	public function __set($name, $value) {
 		if ($name == "debug" || $name == "debugTimer" || $name == "freeze" || $name == "rowClass" || $name == "jsonAsArray") {
