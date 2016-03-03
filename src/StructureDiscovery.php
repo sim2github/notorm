@@ -14,7 +14,7 @@ class StructureDiscovery implements StructureInterface
 	 * @param CacheInterface $cache
 	 * @param string $foreign
 	 */
-	function __construct(\PDO $connection, CacheInterface $cache = null, $foreign = '%s')
+	public function __construct(\PDO $connection, CacheInterface $cache = null, $foreign = '%s')
 	{
 		$this->connection = $connection;
 		$this->cache = $cache;
@@ -26,14 +26,14 @@ class StructureDiscovery implements StructureInterface
 
 	/** Save data to cache
 	 */
-	function __destruct()
+	public function __destruct()
 	{
 		if ($this->cache) {
 			$this->cache->save("structure", $this->structure);
 		}
 	}
 
-	function getReferencingColumn($name, $table)
+	public function getReferencingColumn($name, $table)
 	{
 		$name = strtolower($name);
 		$return = &$this->structure["referencing"][$table];
@@ -52,7 +52,7 @@ class StructureDiscovery implements StructureInterface
 		return $return[$name];
 	}
 
-	function getPrimary($table)
+	public function getPrimary($table)
 	{
 		$return = &$this->structure["primary"][$table];
 		if (!isset($return)) {
@@ -70,12 +70,12 @@ class StructureDiscovery implements StructureInterface
 		return $return;
 	}
 
-	function getReferencingTable($name, $table)
+	public function getReferencingTable($name, $table)
 	{
 		return $name;
 	}
 
-	function getReferencedTable($name, $table)
+	public function getReferencedTable($name, $table)
 	{
 		$column = strtolower($this->getReferencedColumn($name, $table));
 		$return = &$this->structure["referenced"][$table];
@@ -93,12 +93,12 @@ class StructureDiscovery implements StructureInterface
 		return $return[$column];
 	}
 
-	function getReferencedColumn($name, $table)
+	public function getReferencedColumn($name, $table)
 	{
 		return sprintf($this->foreign, $name);
 	}
 
-	function getSequence($table)
+	public function getSequence($table)
 	{
 		return null;
 	}

@@ -7,11 +7,11 @@ namespace NotORM\Tests;
  */
 class TestRow extends \NotORM\Row {
 
-	function offsetExists($key) {
+	public function offsetExists($key) {
 		return parent::offsetExists(preg_replace('~^test_~', '', $key));
 	}
 
-	function offsetGet($key) {
+	public function offsetGet($key) {
 		return parent::offsetGet(preg_replace('~^test_~', '', $key));
 	}
 

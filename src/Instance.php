@@ -19,7 +19,7 @@ class Instance extends AbstractClass {
 	 * @param StructureInterface $structure
 	 * @param CacheInterface $cache
 	 */
-	function __construct(\PDO $connection, StructureInterface $structure = null, CacheInterface $cache = null) {
+	public function __construct(\PDO $connection, StructureInterface $structure = null, CacheInterface $cache = null) {
 		$this->connection = $connection;
 		$this->driver = $connection->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		if (!isset($structure)) {
@@ -33,7 +33,7 @@ class Instance extends AbstractClass {
 	* @param string $table
 	* @return Result
 	*/
-	function __get($table) {
+	public function __get($table) {
 		return new Result($this->structure->getReferencingTable($table, ''), $this, true);
 	}
 
@@ -42,7 +42,7 @@ class Instance extends AbstractClass {
 	 * @param $value
 	 * @return null
 	 */
-	function __set($name, $value) {
+	public function __set($name, $value) {
 		if ($name == "debug" || $name == "debugTimer" || $name == "freeze" || $name == "rowClass" || $name == "jsonAsArray") {
 			$this->$name = $value;
 		} elseif ($name == "transaction") {
@@ -59,7 +59,7 @@ class Instance extends AbstractClass {
 	* @param array $where (["condition"[, array("value")]]) passed to Result::where()
 	* @return Result
 	*/
-	function __call($table, array $where) {
+	public function __call($table, array $where) {
 		if (is_string($table)) {
 			$return = new Result($this->structure->getReferencingTable($table, ''), $this);
 		} else throw  new \InvalidArgumentException;

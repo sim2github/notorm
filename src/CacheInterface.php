@@ -11,13 +11,13 @@ interface CacheInterface
 	 * @param string
 	 * @return mixed or null if not found
 	 */
-	function load($key);
+	public function load($key);
 
 	/** Save data
 	 * @param string
 	 * @param mixed
 	 * @return null
 	 */
-	function save($key, $data);
+	public function save($key, $data);
 
 }

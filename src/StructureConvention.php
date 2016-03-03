@@ -19,7 +19,7 @@ class StructureConvention implements StructureInterface
 	 * @param string %1$s stands for key used after ->, %2$s for table name
 	 * @param string $prefix for all tables
 	 */
-	function __construct($primary = 'id', $foreign = '%s_id', $table = '%s', $prefix = '')
+	public function __construct($primary = 'id', $foreign = '%s_id', $table = '%s', $prefix = '')
 	{
 		$this->primary = $primary;
 		$this->foreign = $foreign;
@@ -27,7 +27,7 @@ class StructureConvention implements StructureInterface
 		$this->prefix = $prefix;
 	}
 
-	function getPrimary($table)
+	public function getPrimary($table)
 	{
 		return sprintf($this->primary, $this->getColumnFromTable($table));
 	}
@@ -40,27 +40,27 @@ class StructureConvention implements StructureInterface
 		return $name;
 	}
 
-	function getReferencingColumn($name, $table)
+	public function getReferencingColumn($name, $table)
 	{
 		return $this->getReferencedColumn(substr($table, strlen($this->prefix)), $this->prefix . $name);
 	}
 
-	function getReferencedColumn($name, $table)
+	public function getReferencedColumn($name, $table)
 	{
 		return sprintf($this->foreign, $this->getColumnFromTable($name), substr($table, strlen($this->prefix)));
 	}
 
-	function getReferencingTable($name, $table)
+	public function getReferencingTable($name, $table)
 	{
 		return $this->prefix . $name;
 	}
 
-	function getReferencedTable($name, $table)
+	public function getReferencedTable($name, $table)
 	{
 		return $this->prefix . sprintf($this->table, $name, $table);
 	}
 
-	function getSequence($table)
+	public function getSequence($table)
 	{
 		return null;
 	}

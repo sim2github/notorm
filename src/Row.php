@@ -15,7 +15,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @param array $row
 	 * @param Result $result
 	 */
-	function __construct(array $row, Result $result) {
+	public function __construct(array $row, Result $result) {
 		$this->row = $row;
 		$this->result = $result;
 		if (array_key_exists($result->primary, $row)) {
@@ -26,7 +26,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	/** Get primary key value
 	* @return string
 	*/
-	function __toString() {
+	public function __toString() {
 		return (string) $this[$this->result->primary]; // (string) - PostgreSQL returns int
 	}
 
@@ -34,7 +34,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	* @param string
 	* @return Row or null if the row does not exist
 	*/
-	function __get($name) {
+	public function __get($name) {
 		$column = $this->result->notORM->structure->getReferencedColumn($name, $this->result->table);
 		$referenced = &$this->result->referenced[$name];
 		if (!isset($referenced)) {
@@ -62,7 +62,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	* @param string
 	* @return bool
 	*/
-	function __isset($name) {
+	public function __isset($name) {
 		return ($this->__get($name) !== null);
 	}
 
@@ -73,7 +73,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @internal param $string
 	 * @internal param or $NotORM_Row null
 	 */
-	function __set($name, Row $value = null) {
+	public function __set($name, Row $value = null) {
 		$column = $this->result->notORM->structure->getReferencedColumn($name, $this->result->table);
 		$this[$column] = $value;
 	}
@@ -82,7 +82,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	* @param string
 	* @return null
 	*/
-	function __unset($name) {
+	public function __unset($name) {
 		$column = $this->result->notORM->structure->getReferencedColumn($name, $this->result->table);
 		unset($this[$column]);
 	}
@@ -92,7 +92,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @param array $args (["condition"[, array("value")]])
 	 * @return MultiResult
 	 */
-	function __call($name, array $args) {
+	public function __call($name, array $args) {
 		$table = $this->result->notORM->structure->getReferencingTable($name, $this->result->table);
 		$column = $this->result->notORM->structure->getReferencingColumn($table, $this->result->table);
 		$return = new MultiResult($table, $this->result, $column, $this[$this->result->primary]);
@@ -107,7 +107,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	* @param array|null $data for all modified values
 	* @return int number of affected rows or false in case of an error
 	*/
-	function update($data = null) {
+	public function update($data = null) {
 		// update is an SQL keyword
 		if (!isset($data)) {
 			$data = $this->modified;
@@ -121,7 +121,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	/** Delete row
 	* @return int number of affected rows or false in case of an error
 	*/
-	function delete() {
+	public function delete() {
 		// delete is an SQL keyword
 		$result = new Result($this->result->table, $this->result->notORM);
 		$return = $result->where($this->result->primary, $this->primary)->delete();
@@ -138,14 +138,14 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 
 	// IteratorAggregate implementation
 
-	function getIterator() {
+	public function getIterator() {
 		$this->access(null);
 		return new \ArrayIterator($this->row);
 	}
 
 	// Countable implementation
 
-	function count() {
+	public function count() {
 		return count($this->row);
 	}
 
@@ -156,7 +156,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @param mixed $key
 	 * @return bool
 	 */
-	function offsetExists($key) {
+	public function offsetExists($key) {
 		$this->access($key);
 		$return = array_key_exists($key, $this->row);
 		if (!$return) {
@@ -170,7 +170,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @param mixed $key
 	 * @return string
 	 */
-	function offsetGet($key) {
+	public function offsetGet($key) {
 		$this->access($key);
 		if (!array_key_exists($key, $this->row)) {
 			$this->access($key, true);
@@ -184,7 +184,7 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @return null
 	 * @internal param column $string name
 	 */
-	function offsetSet($key, $value) {
+	public function offsetSet($key, $value) {
 		$this->row[$key] = $value;
 		$this->modified[$key] = $value;
 	}
@@ -194,14 +194,14 @@ class Row extends AbstractClass implements \IteratorAggregate, \ArrayAccess, \Co
 	 * @return null
 	 * @internal param column $string name
 	 */
-	function offsetUnset($key) {
+	public function offsetUnset($key) {
 		unset($this->row[$key]);
 		unset($this->modified[$key]);
 	}
 
 	// JsonSerializable implementation
 
-	function jsonSerialize() {
+	public function jsonSerialize() {
 		return $this->row;
 	}
 

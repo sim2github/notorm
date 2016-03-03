@@ -7,7 +7,7 @@ namespace NotORM\Tests;
  * @package NotORMl
  */
 class SoftwareConvention extends \NotORM\StructureConvention {
-	function getReferencedTable($name, $table) {
+	public function getReferencedTable($name, $table) {
 		switch ($name) {
 			case 'maintainer': return parent::getReferencedTable('author', $table);
 		}

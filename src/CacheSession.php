@@ -7,7 +7,7 @@ namespace NotORM;
 class CacheSession implements CacheInterface
 {
 
-	function load($key)
+	public function load($key)
 	{
 		if (!isset($_SESSION["NotORM"][$key])) {
 			return null;
@@ -15,7 +15,7 @@ class CacheSession implements CacheInterface
 		return $_SESSION["NotORM"][$key];
 	}
 
-	function save($key, $data)
+	public function save($key, $data)
 	{
 		$_SESSION["NotORM"][$key] = $data;
 	}

@@ -14,7 +14,7 @@ class Literal {
 	* @param mixed parameter
 	* @param mixed ...
 	*/
-	function __construct($value) {
+	public function __construct($value) {
 		$this->value = $value;
 		$this->parameters = func_get_args();
 		array_shift($this->parameters);
@@ -23,7 +23,7 @@ class Literal {
 	/** Get literal value
 	* @return string
 	*/
-	function __toString() {
+	public function __toString() {
 		return $this->value;
 	}
 	

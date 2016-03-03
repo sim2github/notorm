@@ -17,7 +17,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * @param bool $single single row
 	 * @access protected must be public because it is called from NotORM
 	 */
-	function __construct($table, AbstractClass $notORM, $single = false) {
+	public function __construct($table, AbstractClass $notORM, $single = false) {
 		$this->table = $table;
 		$this->notORM = $notORM;
 		$this->single = $single;
@@ -26,7 +26,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	/** Save data to cache and empty result
 	*/
-	function __destruct() {
+	public function __destruct() {
 		if ($this->notORM->cache && !$this->select && isset($this->rows)) {
 			$access = $this->access;
 			if (is_array($access)) {
@@ -111,7 +111,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/** Get SQL query
 	* @return string
 	*/
-	function __toString() {
+	public function __toString() {
 		$return = "SELECT" . $this->topString($this->limit, $this->offset) . " ";
 		$join = $this->createJoins(implode(",", $this->conditions) . "," . implode(",", $this->select) . ",$this->group,$this->having," . implode(",", $this->order));
 		if (!isset($this->rows) && $this->notORM->cache && !is_string($this->accessed)) {
@@ -199,7 +199,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param array
 	* @return int number of affected rows or false in case of an error
 	*/
-	function insert_multi(array $rows) {
+	public function insert_multi(array $rows) {
 		if ($this->notORM->freeze) {
 			return false;
 		}
@@ -248,7 +248,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param ... used for extended insert
 	* @return mixed inserted NotORM\Row or false in case of an error or number of affected rows for INSERT ... SELECT
 	*/
-	function insert($data) {
+	public function insert($data) {
 		$rows = func_get_args();
 		$return = $this->insert_multi($rows);
 		if (!$return) {
@@ -267,7 +267,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param array ($column => $value)
 	* @return int number of affected rows or false in case of an error
 	*/
-	function update(array $data) {
+	public function update(array $data) {
 		if ($this->notORM->freeze) {
 			return false;
 		}
@@ -300,7 +300,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param array ($column => $value), empty array means use $insert
 	* @return int number of affected rows or false in case of an error
 	*/
-	function insert_update(array $unique, array $insert, array $update = array()) {
+	public function insert_update(array $unique, array $insert, array $update = array()) {
 		if (!$update) {
 			$update = $insert;
 		}
@@ -347,14 +347,14 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/** Get last insert ID
 	* @return string number
 	*/
-	function insert_id() {
+	public function insert_id() {
 		return $this->notORM->connection->lastInsertId();
 	}
 	
 	/** Delete all rows in result set
 	* @return int number of affected rows or false in case of an error
 	*/
-	function delete() {
+	public function delete() {
 		if ($this->notORM->freeze) {
 			return false;
 		}
@@ -370,7 +370,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string ...
 	* @return Result fluent interface
 	*/
-	function select($columns) {
+	public function select($columns) {
 		$this->__destruct();
 		if ($columns != "") {
 			foreach (func_get_args() as $columns) {
@@ -388,7 +388,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param mixed ...
 	* @return Result fluent interface
 	*/
-	function where($condition, $parameters = array()) {
+	public function where($condition, $parameters = array()) {
 		$args = func_get_args();
 		return $this->whereOperator("AND", $args);
 	}
@@ -475,7 +475,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		return $condition;
 	}
 	
-	function __call($name, array $args) {
+	public function __call($name, array $args) {
 		$operator = strtoupper($name);
 		switch ($operator) {
 			case "AND":
@@ -491,7 +491,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param mixed ...
 	* @return Result fluent interface
 	*/
-	function __invoke($where, $parameters = array()) {
+	public function __invoke($where, $parameters = array()) {
 		$args = func_get_args();
 		return $this->whereOperator("AND", $args);
 	}
@@ -501,7 +501,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string ...
 	* @return Result fluent interface
 	*/
-	function order($columns) {
+	public function order($columns) {
 		$this->rows = null;
 		if ($columns != "") {
 			$columns = (is_array($columns) ? $columns : func_get_args());
@@ -525,7 +525,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param int
 	* @return Result fluent interface
 	*/
-	function limit($limit, $offset = null) {
+	public function limit($limit, $offset = null) {
 		$this->rows = null;
 		if ($this->union) {
 			$this->unionLimit = +$limit;
@@ -542,7 +542,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string
 	* @return Result fluent interface
 	*/
-	function group($columns, $having = "") {
+	public function group($columns, $having = "") {
 		$this->__destruct();
 		$this->group = $columns;
 		$this->having = $having;
@@ -553,7 +553,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param bool
 	* @return Result fluent interface
 	*/
-	function lock($exclusive = true) {
+	public function lock($exclusive = true) {
 		$this->lock = $exclusive;
 		return $this;
 	}
@@ -563,7 +563,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * @param bool $all
 	 * @return Result fluent interface
 	 */
-	function union(Result $result, $all = false) {
+	public function union(Result $result, $all = false) {
 		$this->union[] = " UNION " . ($all ? "ALL " : "") . ($this->notORM->driver == "sqlite" || $this->notORM->driver == "oci" ? $result : "($result)");
 		$this->parameters = array_merge($this->parameters, $result->parameters);
 		return $this;
@@ -573,7 +573,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string
 	* @return string
 	*/
-	function aggregation($function) {
+	public function aggregation($function) {
 		$join = $this->createJoins(implode(",", $this->conditions) . ",$function");
 		$query = "SELECT $function FROM $this->table" . implode($join);
 		if ($this->where) {
@@ -588,7 +588,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string
 	* @return int
 	*/
-	function count($column = "") {
+	public function count($column = "") {
 		if (!$column) {
 			$this->execute();
 			return count($this->data);
@@ -600,7 +600,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string
 	* @return int
 	*/
-	function min($column) {
+	public function min($column) {
 		return $this->aggregation("MIN($column)");
 	}
 	
@@ -608,7 +608,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string
 	* @return int
 	*/
-	function max($column) {
+	public function max($column) {
 		return $this->aggregation("MAX($column)");
 	}
 	
@@ -616,7 +616,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string
 	* @return int
 	*/
-	function sum($column) {
+	public function sum($column) {
 		return $this->aggregation("SUM($column)");
 	}
 
@@ -669,7 +669,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string column name to return or an empty string for the whole row
 	* @return mixed string or null with $column, NotORM_Row without $column, false if there is no row
 	*/
-	function fetch($column = '') {
+	public function fetch($column = '') {
 		// no $this->select($column) because next calls can access different columns
 		$this->execute();
 		$return = current($this->data);
@@ -685,7 +685,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	* @param string column name used for an array value or an empty string for the whole row
 	* @return array
 	*/
-	function fetchPairs($key, $value = '') {
+	public function fetchPairs($key, $value = '') {
 		$return = array();
 		$clone = clone $this;
 		if ($value != "") {
@@ -731,27 +731,27 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 
 	// Iterator implementation (not IteratorAggregate because $this->data can be changed during iteration)
 	
-	function rewind() {
+	public function rewind() {
 		$this->execute();
 		$this->keys = array_keys($this->data);
 		reset($this->keys);
 	}
 	
 	/** @return Row */
-	function current() {
+	public function current() {
 		return $this->data[current($this->keys)];
 	}
 	
 	/** @return string row ID */
-	function key() {
+	public function key() {
 		return current($this->keys);
 	}
 	
-	function next() {
+	public function next() {
 		next($this->keys);
 	}
 	
-	function valid() {
+	public function valid() {
 		return current($this->keys) !== false;
 	}
 	
@@ -762,7 +762,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * @return bool
 	 * @internal param row $string ID or array for where conditions
 	 */
-	function offsetExists($key) {
+	public function offsetExists($key) {
 		$row = $this->offsetGet($key);
 		return isset($row);
 	}
@@ -772,7 +772,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * @return Row or null if there is no such row
 	 * @throws null
 	 */
-	function offsetGet($key) {
+	public function offsetGet($key) {
 		if ($this->single && !isset($this->data)) {
 			$clone = clone $this;
 			if (is_array($key)) {
@@ -807,7 +807,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * @return null
 	 * @throws null
 	 */
-	function offsetSet($key, $value) {
+	public function offsetSet($key, $value) {
 		$this->execute();
 		$this->data[$key] = $value;
 	}
@@ -817,14 +817,14 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * @return null
 	 * @throws null
 	 */
-	function offsetUnset($key) {
+	public function offsetUnset($key) {
 		$this->execute();
 		unset($this->data[$key]);
 	}
 	
 	// JsonSerializable implementation
 	
-	function jsonSerialize() {
+	public function jsonSerialize() {
 		$this->execute();
 		if ($this->notORM->jsonAsArray) {
 			return array_values($this->data);
