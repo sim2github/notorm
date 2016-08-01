@@ -10,8 +10,7 @@ class StructureDiscovery implements StructureInterface
 	protected $foreign;
 
 	/**
-	 * Create autodisovery structure
-	 * Param use $string "%s_id" to access $name . "_id" column in $row->$name
+	 * Create autodisovery structure. Use $string "%s_id" to access $name . "_id" column in $row->$name
 	 * @param \PDO $connection
 	 * @param CacheInterface $cache
 	 * @param string $foreign
@@ -34,6 +33,29 @@ class StructureDiscovery implements StructureInterface
 		if ($this->cache) {
 			$this->cache->save("structure", $this->structure);
 		}
+	}
+
+	/**
+	 * @inheritdoc
+	 * @param string $table
+	 * @return string
+	 */
+	public function getPrimary($table)
+	{
+		$return = &$this->structure["primary"][$table];
+		if (!isset($return)) {
+			$return = "";
+			foreach ($this->connection->query("EXPLAIN $table") as $column) {
+				if ($column[3] == "PRI") { // 3 - "Key" is not compatible with PDO::CASE_LOWER
+					if ($return != "") {
+						$return = ""; // multi-column primary key is not supported
+						break;
+					}
+					$return = $column[0];
+				}
+			}
+		}
+		return $return;
 	}
 
 	/**
@@ -63,25 +85,13 @@ class StructureDiscovery implements StructureInterface
 
 	/**
 	 * @inheritdoc
+	 * @param string $name
 	 * @param string $table
 	 * @return string
 	 */
-	public function getPrimary($table)
+	public function getReferencingTable($name, $table)
 	{
-		$return = &$this->structure["primary"][$table];
-		if (!isset($return)) {
-			$return = "";
-			foreach ($this->connection->query("EXPLAIN $table") as $column) {
-				if ($column[3] == "PRI") { // 3 - "Key" is not compatible with \PDO::CASE_LOWER
-					if ($return != "") {
-						$return = ""; // multi-column primary key is not supported
-						break;
-					}
-					$return = $column[0];
-				}
-			}
-		}
-		return $return;
+		return $name;
 	}
 
 	/**
@@ -90,9 +100,9 @@ class StructureDiscovery implements StructureInterface
 	 * @param string $table
 	 * @return string
 	 */
-	public function getReferencingTable($name, $table)
+	public function getReferencedColumn($name, $table)
 	{
-		return $name;
+		return sprintf($this->foreign, $name);
 	}
 
 	/**
@@ -118,27 +128,4 @@ class StructureDiscovery implements StructureInterface
 		}
 		return $return[$column];
 	}
-
-	/**
-	 * @inheritdoc
-	 * @param string $name
-	 * @param string $table
-	 * @return string
-	 */
-	public function getReferencedColumn($name, $table)
-	{
-		return sprintf($this->foreign, $name);
-	}
-
-	/**
-	 * @inheritdoc
-	 * @param string $table
-	 * @return null
-	 */
-	public function getSequence($table)
-	{
-		//TODO always null
-		return null;
-	}
-
 }

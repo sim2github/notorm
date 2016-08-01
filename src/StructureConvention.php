@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: sim
- * Date: 27.02.16
- * Time: 17:02
- */
 namespace NotORM;
 
 /** Structure described by some rules
@@ -38,19 +32,6 @@ class StructureConvention implements StructureInterface
 	}
 
 	/**
-	 * Get column name
-	 * @param string $name
-	 * @return string
-	 */
-	protected function getColumnFromTable($name)
-	{
-		if ($this->table != '%s' && preg_match('(^' . str_replace('%s', '(.*)', preg_quote($this->table)) . '$)', $name, $match)) {
-			return $match[1];
-		}
-		return $name;
-	}
-
-	/**
 	 * Get referencing column
 	 * @param string $name
 	 * @param string $table
@@ -59,17 +40,6 @@ class StructureConvention implements StructureInterface
 	public function getReferencingColumn($name, $table)
 	{
 		return $this->getReferencedColumn(substr($table, strlen($this->prefix)), $this->prefix . $name);
-	}
-
-	/**
-	 * Get referenced column
-	 * @param string $name
-	 * @param string $table
-	 * @return string
-	 */
-	public function getReferencedColumn($name, $table)
-	{
-		return sprintf($this->foreign, $this->getColumnFromTable($name), substr($table, strlen($this->prefix)));
 	}
 
 	/**
@@ -84,6 +54,17 @@ class StructureConvention implements StructureInterface
 	}
 
 	/**
+	 * Get referenced column
+	 * @param string $name
+	 * @param string $table
+	 * @return string
+	 */
+	public function getReferencedColumn($name, $table)
+	{
+		return sprintf($this->foreign, $this->getColumnFromTable($name), substr($table, strlen($this->prefix)));
+	}
+
+	/**
 	 * Get referenced table
 	 * @param string $name
 	 * @param string $table
@@ -95,14 +76,15 @@ class StructureConvention implements StructureInterface
 	}
 
 	/**
-	 * Get sequence
-	 * @param string $table
-	 * @return null
+	 * Get column name
+	 * @param string $name
+	 * @return string
 	 */
-	public function getSequence($table)
+	protected function getColumnFromTable($name)
 	{
-		//TODO Why getSequence(?) always return null
-		return null;
+		if ($this->table != '%s' && preg_match('(^' . str_replace('%s', '(.*)', preg_quote($this->table)) . '$)', $name, $match)) {
+			return $match[1];
+		}
+		return $name;
 	}
-
 }

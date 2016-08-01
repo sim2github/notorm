@@ -14,19 +14,17 @@ class MultiResult extends Result {
 	}
 	
 	/** Specify referencing column
-	* @param string
-	* @return MultiResult fluent interface
+	* @param string $column
+	* @return \NotORM\MultiResult fluent interface
 	*/
 	public function via($column) {
 		$this->column = $column;
-		$this->conditions[0] = "$this->table.$column AND";
-		$this->where[0] = "(" . $this->whereIn("$this->table.$column", array_keys((array) $this->result->rows)) . ")";
 		return $this;
 	}
 	
-	public function insert_multi(array $rows) {
+	function insert($data) {
 		$args = array();
-		foreach ($rows as $data) {
+		foreach (func_get_args() as $data) {
 			if ($data instanceof \Traversable && !$data instanceof Result) {
 				$data = iterator_to_array($data);
 			}
@@ -35,7 +33,7 @@ class MultiResult extends Result {
 			}
 			$args[] = $data;
 		}
-		return parent::insert_multi($args);
+		return call_user_func_array(array($this, 'parent::insert'), $args); // works since PHP 5.1.2, array('parent', 'insert') issues E_STRICT in 5.1.2 <= PHP < 5.3.0
 	}
 	
 	public function insert_update(array $unique, array $insert, array $update = array()) {
@@ -44,7 +42,7 @@ class MultiResult extends Result {
 	}
 	
 	protected function single() {
-		$this->where[0] = "($this->column = " . $this->quote($this->active) . ")";
+		$this->where[0] = "$this->column = " . $this->quote($this->active);
 	}
 	
 	public function update(array $data) {
@@ -84,7 +82,7 @@ class MultiResult extends Result {
 		$column = ($join ? "$this->table." : "") . $this->column;
 		$query = "SELECT $function, $column FROM $this->table" . implode($join);
 		if ($this->where) {
-			$query .= " WHERE " . implode($this->where);
+			$query .= " WHERE (" . implode(") AND (", $this->where) . ")";
 		}
 		$query .= " GROUP BY $column";
 		$aggregation = &$this->result->aggregation[$query];

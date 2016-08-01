@@ -14,7 +14,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 
 	/**
 	 * Create table result
-	 * @param $table
+	 * @param string $table
 	 * @param AbstractClass|Instance $notORM
 	 * @param bool $single single row
 	 * @access protected must be public because it is called from NotORM
@@ -38,7 +38,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 			$this->notORM->cache->save("$this->table;" . implode(",", $this->conditions), $access);
 		}
 		$this->rows = null;
-		unset($this->data);
+		$this->data = null;
 	}
 
 	/**
@@ -73,10 +73,10 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 */
 	protected function whereString() {
 		$return = "";
-		if ($this->group) {
+		if (!empty($this->group)) {
 			$return .= " GROUP BY $this->group";
 		}
-		if ($this->having) {
+		if (!empty($this->having)) {
 			$return .= " HAVING $this->having";
 		}
 		if (!empty($this->order)) {
@@ -86,10 +86,10 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		
 		$where = $this->where;
 		if (isset($this->limit) && $this->notORM->driver == "oci") {
-			$where[] = ($where ? " AND " : "") . "(" . ($this->offset ? "rownum > $this->offset AND " : "") . "rownum <= " . ($this->limit + $this->offset) . ")"; //! rownum > doesn't work - requires subselect (see adminer/drivers/oracle.inc.php)
+			$where[] = ($this->offset ? "rownum > $this->offset AND " : "") . "rownum <= " . ($this->limit + $this->offset); //! rownum > doesn't work - requires subselect (see adminer/drivers/oracle.inc.php)
 		}
 		if (!empty($where)) {
-			$return = " WHERE " . implode($where) . $return;
+			$return = " WHERE (" . implode(") AND (", $where) . ")$return";
 		}
 		
 		$return .= $this->limitString($this->limit, $this->offset);
@@ -189,8 +189,8 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 						break;
 					}
 				}
-				if (!is_null($backtrace)) {
-					error_log("$backtrace[file]:$backtrace[line]:$debug\n", 0);
+				if(!is_null($backtrace)){
+				    fwrite(STDERR, "$backtrace[file]:$backtrace[line]:$debug\n");
 				}
 			} elseif (call_user_func($this->notORM->debug, $query, $parameters) === false) {
 				return false;
@@ -243,19 +243,14 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		return $this->notORM->connection->quote($val);
 	}
 	
-	/**
-	 * Shortcut for call_user_func_array(array($this, 'insert'), $rows)
-	 * @param array $rows
-	 * @return int number of affected rows or false in case of an error
-	 */
-	public function insert_multi(array $rows) {
+	/** Insert row in a table
+	* @param mixed array($column => $value)|Traversable for single row insert or NotORM_Result|string for INSERT ... SELECT
+	* @return \NotORM\Row inserted row or false in case of an error or number of affected rows for INSERT ... SELECT
+	*/
+	public function insert($data) {
 		if ($this->notORM->freeze) {
 			return false;
 		}
-		if (empty($rows)) {
-			return 0;
-		}
-		$data = reset($rows);
 		$parameters = array();
 		if ($data instanceof Result) {
 			$parameters = $data->parameters; //! other parameters
@@ -266,7 +261,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		$insert = $data;
 		if (is_array($data)) {
 			$values = array();
-			foreach ($rows as $value) {
+			foreach (func_get_args() as $value) {
 				if ($value instanceof \Traversable) {
 					$value = iterator_to_array($value);
 				}
@@ -277,11 +272,8 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 					}
 				}
 			}
-			//! driver specific extended insert
-			$insert = (!empty($data) || $this->notORM->driver == "mysql"
-				? "(" . implode(", ", array_keys($data)) . ") VALUES " . implode(", ", $values)
-				: "DEFAULT VALUES"
-			);
+			//! driver specific empty $data and extended insert
+			$insert = "(" . implode(", ", array_keys($data)) . ") VALUES " . implode(", ", $values);
 		}
 		// requires empty $this->parameters
 		$return = $this->query("INSERT INTO $this->table $insert", $parameters);
@@ -289,23 +281,8 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 			return false;
 		}
 		$this->rows = null;
-		return $return->rowCount();
-	}
-
-	/**
-	 * Insert row in a table
-	 * array($column => $value)|Traversable for single row insert or Result|string for INSERT ... SELECT
-	 * @param string $data used for extended insert
-	 * @return mixed inserted NotORM\Row or false in case of an error or number of affected rows for INSERT ... SELECT
-	 */
-	public function insert($data) {
-		$rows = func_get_args();
-		$return = $this->insert_multi($rows);
-		if (!$return) {
-			return false;
-		}
 		if (!is_array($data)) {
-			return $return;
+			return $return->rowCount();
 		}
 		if (!isset($data[$this->primary]) && ($id = $this->notORM->connection->lastInsertId($this->notORM->structure->getSequence($this->table)))) {
 			$data[$this->primary] = $id;
@@ -390,20 +367,12 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 				if ($errorMode == \PDO::ERRMODE_EXCEPTION) {
 					throw $e;
 				} elseif ($errorMode == \PDO::ERRMODE_WARNING) {
-					trigger_error("\PDOStatement::execute(): " . $e->getMessage(), E_USER_WARNING); // E_WARNING is unusable
+					trigger_error("PDOStatement::execute(): " . $e->getMessage(), E_USER_WARNING); // E_WARNING is unusable
 				}
 			}
 		}
 	}
-	
-	/**
-	 * Get last insert ID
-	 * @return string number
-	 */
-	public function insert_id() {
-		return $this->notORM->connection->lastInsertId();
-	}
-	
+
 	/**
 	 * Delete all rows in result set
 	 * @return int number of affected rows or false in case of an error
@@ -421,17 +390,13 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	/**
 	 * Add select clause, more calls appends to the end
-	 * @param string $columns for example "column, MD5(column) AS column_md5", empty string to reset previously set columns
-	 * @return Result fluent interface
+	 * @param string $columns for example "column, MD5(column) AS column_md5"
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function select($columns) {
 		$this->__destruct();
-		if ($columns != "") {
-			foreach (func_get_args() as $columns) {
-				$this->select[] = $columns;
-			}
-		} else {
-			$this->select = array();
+		foreach (func_get_args() as $columns) {
+			$this->select[] = $columns;
 		}
 		return $this;
 	}
@@ -440,22 +405,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * Add where condition, more calls appends with AND
 	 * @param mixed $condition string possibly containing ? or :name; or array($condition => $parameters, ...)
 	 * @param mixed|array $parameters accepted by \PDOStatement::execute or a scalar value
-	 * @return Result fluent interface
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function where($condition, $parameters = array()) {
-		$args = func_get_args();
-		return $this->whereOperator("AND", $args);
-	}
-
-	/**
-	 * Where Operator
-	 * @param string $operator
-	 * @param array $args
-	 * @return Result $this
-	 */
-	protected function whereOperator($operator, array $args) {
-		$condition = $args[0];
-		$parameters = (count($args) > 1 ? $args[1] : array());
 		if (is_array($condition)) { // where(array("column1" => 1, "column2 > ?" => 2))
 			foreach ($condition as $key => $val) {
 				$this->where($key, $val);
@@ -463,14 +415,16 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 			return $this;
 		}
 		$this->__destruct();
-		$this->conditions[] = "$operator $condition";
+		$this->conditions[] = $condition;
 		$condition = $this->removeExtraDots($condition);
-		if (count($args) != 2 || strpbrk($condition, "?:")) { // where("column < ? OR column > ?", array(1, 2))
-			if (count($args) != 2 || !is_array($parameters)) { // where("column < ? OR column > ?", 1, 2)
-				$parameters = array_slice($args, 1);
+		$args = func_num_args();
+		if ($args != 2 || strpbrk($condition, "?:")) { // where("column < ? OR column > ?", array(1, 2))
+			if ($args != 2 || !is_array($parameters)) { // where("column < ? OR column > ?", 1, 2)
+				$parameters = func_get_args();
+				array_shift($parameters);
 			}
 			$this->parameters = array_merge($this->parameters, $parameters);
-		} elseif ($parameters === null) { // where("column", null)
+		} elseif (is_null($parameters)) { // where("column", null)
 			$condition .= " IS NULL";
 		} elseif ($parameters instanceof Result) { // where("column", $db->$table())
 			$clone = clone $parameters;
@@ -506,88 +460,46 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		} elseif (!is_array($parameters)) { // where("column", "x")
 			$condition .= " = " . $this->quote($parameters);
 		} else { // where("column", array(1, 2))
-			$condition = $this->whereIn($condition, $parameters);
+			if (!$parameters) {
+				$condition = "($condition) IS NOT NULL AND $condition IS NULL";
+			} elseif ($this->notORM->driver != "oci") {
+				$condition .= " IN " . $this->quote($parameters);
+			} else { // http://download.oracle.com/docs/cd/B19306_01/server.102/b14200/expressions014.htm
+				$or = array();
+				for ($i=0; $i < count($parameters); $i += 1000) {
+					$or[] = "$condition IN " . $this->quote(array_slice($parameters, $i, 1000));
+				}
+				$condition = "(" . implode(" OR ", $or) . ")";
+			}
 		}
-		$this->where[] = (preg_match('~^\)+$~', $condition)
-			? $condition
-			: ($this->where ? " $operator " : "") . "($condition)"
-		);
+		$this->where[] = $condition;
 		return $this;
-	}
-
-	/**
-	 * Where In
-	 * @param $condition
-	 * @param $parameters
-	 * @return string
-	 */
-	protected function whereIn($condition, $parameters) {
-		if (!$parameters) {
-			$condition = "($condition) IS NOT NULL AND $condition IS NULL";
-		} elseif ($this->notORM->driver != "oci") {
-			$column = $condition;
-			$condition .= " IN " . $this->quote($parameters);
-			$nulls = array_filter($parameters, 'is_null');
-			if (!empty($nulls)) {
-				$condition = "$condition OR $column IS NULL";
-			}
-		} else { // http://download.oracle.com/docs/cd/B19306_01/server.102/b14200/expressions014.htm
-			$or = array();
-			for ($i=0, $c=count($parameters); $i<$c; $i += 1000) {
-				$or[] = "$condition IN " . $this->quote(array_slice($parameters, $i, 1000));
-			}
-			$condition = implode(" OR ", $or);
-		}
-		return $condition;
-	}
-
-	/**
-	 * Shortcut to where operator
-	 * @param $name
-	 * @param array $args
-	 * @return Result
-	 */
-	public function __call($name, array $args) {
-		$operator = strtoupper($name);
-		switch ($operator) {
-			case "AND":
-			case "OR":
-				return $this->whereOperator($operator, $args);
-			default: trigger_error("Call to undefined method Result::$name()", E_USER_ERROR);
-		}
 	}
 
 	/**
 	 * Shortcut for where()
 	 * @param $where
 	 * @param array $parameters
-	 * @return Result fluent interface
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function __invoke($where, $parameters = array()) {
 		$args = func_get_args();
-		return $this->whereOperator("AND", $args);
+		return call_user_func_array(array($this, 'where'), $args);
 	}
 	
 	/**
 	 * Add order clause, more calls appends to the end
-	 * @param $columns string "column1, column2 DESC" or array("column1", "column2 DESC"), empty string to reset previous order
-	 * @return Result fluent interface
+	 * @param $columns string "column1, column2 DESC"
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function order($columns) {
 		$this->rows = null;
-		if ($columns != "") {
-			$columns = (is_array($columns) ? $columns : func_get_args());
-			foreach ($columns as $column) {
-				if (!empty($this->union)) {
-					$this->unionOrder[] = $column;
-				} else {
-					$this->order[] = $column;
-				}
+		foreach (func_get_args() as $columns) {
+			if ($this->union) {
+				$this->unionOrder[] = $columns;
+			} else {
+				$this->order[] = $columns;
 			}
-		} elseif (!empty($this->union)) {
-			$this->unionOrder = array();
-		} else {
-			$this->order = array();
 		}
 		return $this;
 	}
@@ -596,7 +508,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * Set limit clause, more calls rewrite old values
 	 * @param int $limit
 	 * @param int|null $offset
-	 * @return Result fluent interface
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function limit($limit, $offset = null) {
 		$this->rows = null;
@@ -614,7 +526,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	 * Set group clause, more calls rewrite old values
 	 * @param string $columns
 	 * @param string $having
-	 * @return Result fluent interface
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function group($columns, $having = "") {
 		$this->__destruct();
@@ -626,7 +538,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/**
 	 * Set select FOR UPDATE or LOCK IN SHARE MODE
 	 * @param bool $exclusive
-	 * @return Result fluent interface
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function lock($exclusive = true) {
 		$this->lock = $exclusive;
@@ -635,9 +547,9 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 
 	/**
 	 * Union in supported drivers
-	 * @param Result $result
+	 * @param \NotORM\Result $result
 	 * @param bool $all
-	 * @return Result fluent interface
+	 * @return \NotORM\Result fluent interface
 	 */
 	public function union(Result $result, $all = false) {
 		$this->union[] = " UNION " . ($all ? "ALL " : "") . ($this->notORM->driver == "sqlite" || $this->notORM->driver == "oci" ? $result : "($result)");
@@ -654,7 +566,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		$join = $this->createJoins(implode(",", $this->conditions) . ",$function");
 		$query = "SELECT $function FROM $this->table" . implode($join);
 		if (!empty($this->where)) {
-			$query .= " WHERE " . implode($this->where);
+			$query .= " WHERE (" . implode(") AND (", $this->where) . ")";
 		}
 		foreach ($this->query($query, $this->parameters)->fetch() as $return) {
 			return $return;
@@ -677,7 +589,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/**
 	 * Return minimum value from a column
 	 * @param string $column
-	 * @return string
+	 * @return int
 	 */
 	public function min($column) {
 		return $this->aggregation("MIN($column)");
@@ -686,7 +598,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/**
 	 * Return maximum value from a column
 	 * @param string $column
-	 * @return string
+	 * @return int
 	 */
 	public function max($column) {
 		return $this->aggregation("MAX($column)");
@@ -695,7 +607,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/**
 	 * Return sum of values in a column
 	 * @param string $column
-	 * @return string
+	 * @return int
 	 */
 	public function sum($column) {
 		return $this->aggregation("SUM($column)");
@@ -750,7 +662,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/**
 	 * Fetch next row of result
 	 * @param string $column name to return or an empty string for the whole row
-	 * @return mixed string|null with $column, Row without $column, false if there is no row
+	 * @return mixed string|null with $column, \NotORM\Row without $column, false if there is no row
 	 */
 	public function fetch($column = '') {
 		// no $this->select($column) because next calls can access different columns
@@ -782,20 +694,37 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 		}
 		foreach ($clone as $row) {
 			$values = array_values(iterator_to_array($row));
-			if ($value != "" && $clone instanceof MultiResult) {
-				array_shift($values);
-			}
-			$return[(string) $values[0]] = ($value != "" ? $values[(array_key_exists(1, $values) ? 1 : 0)] : $row); // isset($values[1]) - fetchPairs("id", "id")
+			$return[$values[0]] = ($value != "" ? $values[(isset($values[1]) ? 1 : 0)] : $row); // isset($values[1]) - fetchPairs("id", "id")
 		}
 		return $return;
 	}
 
 	/**
-	 * Access
+	 * Pass result to callback
+	* @param $callback with signature \NotORM\Result $result
+	* @return null
+	*/
+	function then($callback) {
+		return Instance::then($this, $callback);
+		// don't return $this - should be at the end of fluent call
+	}
+
+	/**
+	 * Pass each row to callback
+	* @param $callback with signature \NotORM\Row $row, $id
+	* @return null
+	*/
+	function thenForeach($callback) {
+		$foreach = new ThenForeach($callback); // since PHP 5.3: function ($result) use ($callback) { foreach ($result as $id => $row) { $callback($row, $id); } }
+		return Instance::then($this, array($foreach, '__invoke'));
+	}
+
+	/**
+	 * Set access
 	 * @param $key
 	 * @param bool $delete
 	 * @return bool
-	 */
+     */
 	protected function access($key, $delete = false) {
 		if ($delete) {
 			if (is_array($this->access)) {
@@ -835,7 +764,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	
 	/**
 	 * @inheritdoc
-	 * @return Row
+	 * @return \NotORM\Row
 	 */
 	public function current() {
 		return $this->data[current($this->keys)];
@@ -867,9 +796,8 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 
 	/**
 	 * Test if row exists
-	 * @param mixed $key
+	 * @param \NotORM\Row ID | array for where conditions $key
 	 * @return bool
-	 * @internal param row $string ID or array for where conditions
 	 */
 	public function offsetExists($key) {
 		$row = $this->offsetGet($key);
@@ -879,31 +807,33 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 	/**
 	 * Get specified row
 	 * @param string $key row ID or array for where conditions
-	 * @return Row or null if there is no such row
+	 * @return \NotORM\Row | null if there is no such row
 	 * @throws null
 	 */
 	public function offsetGet($key) {
 		if ($this->single && !isset($this->data)) {
 			$clone = clone $this;
+			$clone->single = false; // execute as normal query
 			if (is_array($key)) {
 				$clone->where($key)->limit(1);
 			} else {
 				$clone->where($this->primary, $key);
 			}
 			$return = $clone->fetch();
-			if ($return) {
-				return $return;
+			if (!$return) {
+				return null;
 			}
+			return $return;
 		} else {
 			$this->execute();
 			if (is_array($key)) {
 				foreach ($this->data as $row) {
 					foreach ($key as $k => $v) {
 						if ((isset($v) && $row[$k] !== null ? $row[$k] != $v : $row[$k] !== $v)) {
-							continue 2;
+							break;
 						}
+						return $row;
 					}
-					return $row;
 				}
 			} elseif (isset($this->data[$key])) {
 				return $this->data[$key];
@@ -913,8 +843,8 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 
 	/**
 	 * Mimic row
-	 * @param mixed $key string ID
-	 * @param mixed $value NotORM\Row
+	 * @param string $key ID
+	 * @param \NotORM\Row $value
 	 * @return null
 	 * @throws null
 	 */
@@ -925,7 +855,7 @@ class Result extends AbstractClass implements \Iterator, \ArrayAccess, \Countabl
 
 	/**
 	 * Remove row from result set
-	 * @param mixed $key string ID
+	 * @param string $key ID
 	 * @return null
 	 * @throws null
 	 */

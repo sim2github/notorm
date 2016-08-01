@@ -1,6 +1,8 @@
 <?php
 namespace NotORM\Tests;
 
+use NotORM\Instance;
+
 abstract class BaseTestCase extends \PHPUnit_Framework_TestCase
 {
 	protected static $params, $db_type;
@@ -833,4 +835,46 @@ JSON;
 
 	}
 
+	/**
+	 * Then foreach testing
+	 */
+	public function testThenForeach()
+	{
+		$expected = [
+			'Authors' => [ 'Jakub Vrana' ,'David Grudl'],
+			'Application tags' => [
+				'Adminer' => 'PHP',
+				'Adminer' => 'MySQL',
+				'JUSH' => 'JavaScript',
+				'Nette' => 'PHP',
+				'Dibi' => 'PHP',
+				'Dibi' => 'MySQL'
+			]
+		];
+
+		$software = $this->db->software();
+		Instance::then(function () use ($software) {
+			$software->author()->order("id")->then(function ($authors) {
+				if (count($authors)) {
+					foreach ($authors as $author) {
+						$result[] = $author[name];
+					}
+					$result['Authors'] = array_pop($result);
+				}
+			});
+
+			echo "Application tags:\n";
+			$software->application_tag()->order("application_id, tag_id")->thenForeach(function ($application_tag) {
+				NotORM::then($application_tag->application, $application_tag->tag, function ($application, $tag) {
+					echo "$application[title]: $tag[name]\n";
+				});
+			});
+		});
+
+		foreach ($this->db->application('author_id', 11)->and('maintainer_id', 11) as $application) {
+			$result = $application['title'];
+		}
+
+		$this->assertEquals($expected, $result);
+	}
 }

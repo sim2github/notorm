@@ -9,10 +9,9 @@ class Literal {
 	/** @var array */
 	public $parameters = array();
 	
-	/** Create literal value
-	* @param string
-	* @param mixed parameter
-	* @param mixed ...
+	/**
+	 * Create literal value
+	* @param string $value
 	*/
 	public function __construct($value) {
 		$this->value = $value;
@@ -20,7 +19,8 @@ class Literal {
 		array_shift($this->parameters);
 	}
 	
-	/** Get literal value
+	/**
+	 * Get literal value
 	* @return string
 	*/
 	public function __toString() {

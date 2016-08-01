@@ -16,8 +16,8 @@ class Instance extends AbstractClass {
 
 	/** Create database representation
 	 * @param \PDO $connection
-	 * @param StructureInterface $structure
-	 * @param CacheInterface $cache
+	 * @param \NotORM\StructureInterface $structure
+	 * @param \NotORM\CacheInterface $cache
 	 */
 	public function __construct(\PDO $connection, StructureInterface $structure = null, CacheInterface $cache = null) {
 		$this->connection = $connection;
@@ -31,7 +31,7 @@ class Instance extends AbstractClass {
 	
 	/** Get table data to use as $db->table[1]
 	* @param string $table
-	* @return Result
+	* @return \NotORM\Result
 	*/
 	public function __get($table) {
 		return new Result($this->structure->getReferencingTable($table, ''), $this, true);
@@ -57,7 +57,7 @@ class Instance extends AbstractClass {
 	/** Get table data
 	* @param string $table
 	* @param array $where (["condition"[, array("value")]]) passed to Result::where()
-	* @return Result
+	* @return \NotORM\Result
 	*/
 	public function __call($table, array $where) {
 		if (is_string($table)) {
@@ -70,8 +70,41 @@ class Instance extends AbstractClass {
 		return $return;
 	}
 
-	protected function access($key, $delete = false)
-	{
-		// TODO: Implement access() method. Or not implement at all.
+	/** @access protected must be public because it is called by ob_start() */
+	public static function out($string) {
+		if (!self::$queue) {
+			return $string;
+		}
+		self::$queue[] = $string;
+		return "";
 	}
+
+	/**
+	 * Deferred call
+	 * @param $callback
+	 * @return null
+	 */
+	public static function then($callback) { // static because it uses ob_start() which creates a global state
+		if (isset(self::$queue)) {
+			self::$queue[] = func_get_args();
+		} else { // top level call
+			self::$queue = array(func_get_args());
+			ob_start(array('NotORM', 'out'), 2); // 2 - minimal value, 1 means 4096 before PHP 5.4
+			while (self::$queue) {
+				$original = self::$queue;
+				self::$queue = array(); // queue is refilled in self::out() and self::then() calls from callbacks
+				foreach ($original as $results) {
+					if (!is_array($results)) {
+						echo $results; // self::out() is called by ob_start() so that it can print or requeue the string
+					} else {
+						$callback = array_pop($results);
+						call_user_func_array($callback, $results);
+					}
+				}
+			}
+			ob_end_flush();
+			self::$queue = null; // mark top level call for the next time
+		}
+	}
+
 }

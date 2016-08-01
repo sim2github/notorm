@@ -44,12 +44,4 @@ interface StructureInterface {
 	 * @return string
 	 */
 	public function getReferencedTable($name, $table);
-
-	/**
-	 * Get sequence name, used by insert
-	 * @param string $table
-	 * @return string
-	 */
-	public function getSequence($table);
-
 }
